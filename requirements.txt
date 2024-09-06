@@ -3,3 +3,4 @@ numpy
 pmdarima
 keras
 tensorflow
+statsmodels
