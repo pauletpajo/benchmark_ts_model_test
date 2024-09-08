@@ -82,6 +82,7 @@ def get_XY(data, time_steps):
     X = np.reshape(X, (rows_x, time_steps, 1))    
     return X, Y
 
+
 # Function to build and compile the RNN model
 def build_rnn(time_steps=12, units=3, dense_units=1, activation=['tanh', 'tanh']):
     model = Sequential()
