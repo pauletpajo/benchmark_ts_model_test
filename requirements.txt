@@ -4,3 +4,4 @@ pmdarima
 keras
 tensorflow
 statsmodels
+scikit-learn
