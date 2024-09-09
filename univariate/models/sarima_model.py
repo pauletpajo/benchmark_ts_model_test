@@ -25,11 +25,20 @@
 #     mae = sum(abs(predictions - test_data)) / len(test_data)
 #     return mae
 
+# ================================================================
 
 
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 import itertools
+import numpy as np
+
+
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+
 
 def grid_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q_values, m_values):
     best_score, best_cfg = float("inf"), None
@@ -41,9 +50,11 @@ def grid_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q
             model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
             model_fit = model.fit(disp=False)
             predictions = model_fit.forecast(steps=len(test))
-            mae = mean_absolute_error(test, predictions)
-            if mae < best_score:
-                best_score, best_cfg = mae, (p, d, q, P, D, Q, m)
+            mape = mean_absolute_percentage_error(test, predictions)
+
+
+            if mape < best_score:
+                best_score, best_cfg = mape, (p, d, q, P, D, Q, m)
         except:
             continue
     return best_cfg, best_score
@@ -51,9 +62,22 @@ def grid_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q
 def evaluate_sarima(data, best_cfg):
     train_size = int(len(data) * 0.8)
     train, test = data[:train_size], data[train_size:]
+
+
     p, d, q, P, D, Q, m = best_cfg
     model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
     model_fit = model.fit(disp=False)
     predictions = model_fit.forecast(steps=len(test))
+
+   # Compute metrics
     mae = mean_absolute_error(test, predictions)
-    return mae
+    mape = mean_absolute_percentage_error(test, predictions)
+    mse = mean_squared_error(test, predictions)
+    rmse = np.sqrt(mse)
+    
+    print(f"MAE: {mae}")
+    print(f"MAPE: {mape}%")
+    print(f"MSE: {mse}")
+    print(f"RMSE: {rmse}")
+    
+    return mae, mape, mse, rmse

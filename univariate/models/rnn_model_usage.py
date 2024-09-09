@@ -144,6 +144,9 @@ def grid_search(df, units_list, time_steps=12):
     print(f"Best units: {best_units}")
     return best_model, best_scaler, best_units
 
+
+
+
 def main():
     # Load data
     sunspots_url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/monthly-sunspots.csv'
