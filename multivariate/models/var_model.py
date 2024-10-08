@@ -1,187 +1,71 @@
-# import pandas as pd
-# from statsmodels.tsa.api import VAR
-# from sklearn.metrics import mean_squared_error
-
-# # Example DataFrame
-# df = pd.read_csv('datasets/apple2.csv', index_col = 0, parse_dates = True)  # Your multivariate time series data
-
-# # Function to apply differencing
-# def apply_differencing(df, d):
-#     if d == 0:
-#         return df  # No differencing if d is 0
-#     else:
-#         return df.diff(d).dropna()
-
-# # Split data into train and test sets
-# # You can adjust the split ratio as needed
-# train_size = int(len(df) * 0.8)  # 80% for training
-# df_train, df_test = df[:train_size], df[train_size:]
-
-# # Search space for differencing order (d) and lag (p)
-# d_values = [0, 1, 2]  # Differencing orders to try
-# p_values = range(1, 11)  # Lags to try
-
-
-
-# best_mse = float('inf')
-# best_params = {'d': None, 'p': None}
-
-# for d in d_values:
-#     # Apply differencing to the training data
-#     df_train_diff = apply_differencing(df_train, d)
-    
-#     for p in p_values:
-#         try:
-#             # Fit VAR model on training data
-#             model = VAR(df_train_diff)
-#             results = model.fit(p)
-            
-#             # Forecast for test set length
-#             lag_order = results.k_ar
-#             forecast_input = df_train_diff.values[-lag_order:]
-            
-#             # Forecast future values for the test set
-#             forecast = results.forecast(y=forecast_input, steps=len(df_test))
-            
-#             # Apply differencing to test data to compare
-#             df_test_diff = apply_differencing(df_test, d)
-            
-#             # Calculate MSE on the differenced test data
-#             mse = mean_squared_error(df_test_diff.iloc[:len(forecast)], forecast)
-            
-#             # Check if this is the best model so far
-#             if mse < best_mse:
-#                 best_mse = mse
-#                 best_params = {'d': d, 'p': p}
-#         except Exception as e:
-#             print(f"Model failed for d={d}, p={p}: {e}")
-
-# print(f"Best Parameters: d={best_params['d']}, p={best_params['p']}, MSE={best_mse}")
-
-
-
-
-
-# import pandas as pd
-# from statsmodels.tsa.api import VAR
-# from sklearn.metrics import mean_squared_error
-
-# # Load DataFrame
-# df = pd.read_csv('datasets/apple2.csv', index_col=0, parse_dates=True)
-
-# # Function to apply differencing
-# def apply_differencing(df, d):
-#     if d == 0:
-#         return df
-#     else:
-#         return df.diff(d).dropna()
-
-# # Split data into train and test sets
-# train_size = int(len(df) * 0.8)
-# df_train, df_test = df[:train_size], df[train_size:]
-
-# # Initialize best parameters
-# best_mse = float('inf')
-# best_params = {'d': None, 'p': None}
-
-# # Search space for differencing order (d) and lag (p)
-# d_values = [0, 1, 2]  # Differencing orders to try
-# p_values = range(1, 11)  # Lags to try
-
-# for d in d_values:
-#     # Apply differencing to the training data
-#     df_train_diff = apply_differencing(df_train, d)
-    
-#     # Adjust the length of the test set based on differencing
-#     df_test_diff = apply_differencing(df_test, d)
-    
-#     for p in p_values:
-#         try:
-#             # Fit VAR model on training data
-#             model = VAR(df_train_diff)
-#             results = model.fit(p)
-            
-#             # Forecast for the length of the test set
-#             lag_order = results.k_ar
-#             forecast_input = df_train_diff.values[-lag_order:]
-            
-#             # Forecast future values for the test set
-#             forecast = results.forecast(y=forecast_input, steps=len(df_test_diff))
-            
-#             # Calculate MSE on the differenced test data
-#             mse = mean_squared_error(df_test_diff, forecast)
-            
-#             # Check if this is the best model so far
-#             if mse < best_mse:
-#                 best_mse = mse
-#                 best_params = {'d': d, 'p': p}
-                
-#         except Exception as e:
-#             print(f"Model failed for d={d}, p={p}: {e}")
-
-# print(f"Best Parameters: d={best_params['d']}, p={best_params['p']}, MSE={best_mse}")
-
-
-
 import pandas as pd
+import numpy as np
 from statsmodels.tsa.api import VAR
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
 
-# Load DataFrame
-df = pd.read_csv('datasets/apple2.csv', index_col=0, parse_dates=True)
 
-# Function to apply differencing
 def apply_differencing(df, d):
     if d == 0:
         return df
     else:
         return df.diff(d).dropna()
 
-# Split data into train and test sets
-train_size = int(len(df) * 0.8)
-df_train, df_test = df[:train_size], df[train_size:]
 
-# Initialize best parameters
-best_mse = float('inf')
-best_params = {'d': None, 'p': None}
+def grid_search_var(df, d_values=[0, 1, 2], p=15):
+    df_original = df.copy(deep=True)  # Ensure original df isn't modified
+    metrics = {}
 
-# Search space for differencing order (d) and lag (p)
-d_values = [0, 1, 2]  # Differencing orders to try
-p_values = range(1, 11)  # Lags to try
+    train_size = int(len(df) * 0.8)
+    counter = True
 
-for d in d_values:
-    # Apply differencing to the training data
-    df_train_diff = apply_differencing(df_train, d)
-    
-    # Adjust the length of the test set based on differencing
-    df_test_diff = apply_differencing(df_test, d)
-    
-    for p in p_values:
+    for d in d_values:
+        # Apply differencing on the df so that we don't have to offset the forecast to compute the metrics.
+        df_diff = apply_differencing(df_original, d)
+        df_train_diff, df_test_diff = df_diff[:train_size], df_diff[train_size:]
+
         try:
             # Fit VAR model on training data
             model = VAR(df_train_diff)
-            results = model.fit(p)
-            
-            # Forecast for the length of the test set
-            lag_order = results.k_ar
-            forecast_input = df_train_diff.values[-lag_order:]
-            
-            # Forecast future values for the test set
-            forecast = results.forecast(y=forecast_input, steps=len(df_test_diff))
-            
-            # Offset forecast by 'd' to align with the original test set
-            df_test_aligned = df_test[d:].values  # Skip first 'd' rows in the original test set
-            
-            # Calculate MSE between the aligned test set and the forecast
-            mse = mean_squared_error(df_test_aligned, forecast)
-            
+            fitted_model = model.fit(p)
 
-            # Check if this is the best model so far
-            if mse < best_mse:
-                best_mse = mse
-                best_params = {'d': d, 'p': p}
-                
+            # Forecast future values for the test set
+            forecast = fitted_model.forecast(df_train_diff.values[-fitted_model.k_ar:], steps=len(df_test_diff))
+            forecast_df = pd.DataFrame(forecast, index=df_test_diff.index, columns=df.columns)
+
+            # Calculate error metrics on the target column (last column)
+            mse = mean_squared_error(df_test_diff.iloc[:, -1], forecast_df.iloc[:, -1])
+            rmse = np.sqrt(mse)
+            mae = mean_absolute_error(df_test_diff.iloc[:, -1], forecast_df.iloc[:, -1])
+            mape = mean_absolute_percentage_error(df_test_diff.iloc[:, -1], forecast_df.iloc[:, -1])
+
+            # Store the best result (minimum MAPE)
+            if counter:
+                metrics = {
+                    "mse": mse,
+                    "rmse": rmse,
+                    "mae": mae,
+                    "mape": mape,
+                }
+                counter = False  # Set counter to False after the first iteration
+            else:
+                if mape < metrics['mape']:
+                    metrics = {
+                        "mse": mse,
+                        "rmse": rmse,
+                        "mae": mae,
+                        "mape": mape,
+                    }
         except Exception as e:
             print(f"Model failed for d={d}, p={p}: {e}")
 
-print(f"Best Parameters: d={best_params['d']}, p={best_params['p']}, MSE={best_mse}")
+    # Return the best metrics after the search is complete
+    return metrics
+
+
+# Load a dataset for testing (replace 'your_dataset.csv' with the actual dataset file)
+df = pd.read_csv('datasets/apple2.csv', index_col=0, parse_dates=True)
+
+# Call the grid search function and get the best parameters
+metrics = grid_search_var(df)
+print(metrics)
+
