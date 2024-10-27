@@ -1,83 +1,107 @@
-# from pmdarima import auto_arima
-# import pandas as pd
+# from statsmodels.tsa.statespace.sarimax import SARIMAX
+# from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
+# import itertools
+# import numpy as np
+
+# def grid_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q_values, m_values):
+#     best_score, best_cfg = float("inf"), None
+#     train_size = int(len(data) * 0.8)
+#     train, test = data[:train_size], data[train_size:]
+    
+#     for p, d, q, P, D, Q, m in itertools.product(p_values, d_values, q_values, P_values, D_values, Q_values, m_values):
+#         try:
+#             model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
+#             model_fit = model.fit(disp=False)
+#             predictions = model_fit.forecast(steps=len(test))
+#             mape = mean_absolute_percentage_error(test, predictions)
 
 
-# def train_sarima(data):
-#     model = auto_arima(data, seasonal=True, m=12)
-#     return model
+#             if mape < best_score:
+#                 best_score, best_cfg = mape, (p, d, q, P, D, Q, m)
+#         except:
+#             continue
+#     return best_cfg, best_score
+
+# def evaluate_sarima(data, best_cfg):
+#     train_size = int(len(data) * 0.8)
+#     train, test = data[:train_size], data[train_size:]
 
 
-# def evaluate_sarima(model, data):
-#     predictions = model.predict(n_periods=len(data))
-#     mae = sum(abs(predictions - data)) / len(data)
-#     return mae
+#     p, d, q, P, D, Q, m = best_cfg
+#     model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
+#     model_fit = model.fit(disp=False)
+#     predictions = model_fit.forecast(steps=len(test))
 
-
-# from pmdarima import auto_arima
-# import pandas as pd
-
-# def train_sarima(train_data):
-#     model = auto_arima(train_data, seasonal=True, m=12)
-#     return model
-
-# def evaluate_sarima(model, test_data):
-#     predictions = model.predict(n_periods=len(test_data))
-#     mae = sum(abs(predictions - test_data)) / len(test_data)
-#     return mae
-
-# ================================================================
-
+#    # Compute metrics
+#     mae = mean_absolute_error(test, predictions)
+#     mape = mean_absolute_percentage_error(test, predictions)
+#     mse = mean_squared_error(test, predictions)
+#     rmse = np.sqrt(mse)
+    
+#     results =  {
+#         "mae" : mae, 
+#         "mape" : mape, 
+#         "mse" : mse, 
+#         "rmse": rmse, 
+#     }
+    
+#     return results
 
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-import itertools
+from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
 import numpy as np
 
-
-def mean_absolute_percentage_error(y_true, y_pred):
-    y_true, y_pred = np.array(y_true), np.array(y_pred)
-    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
-
-
-
-def grid_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q_values, m_values):
+def random_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q_values, m_values, n_iter=10):
     best_score, best_cfg = float("inf"), None
     train_size = int(len(data) * 0.8)
     train, test = data[:train_size], data[train_size:]
     
-    for p, d, q, P, D, Q, m in itertools.product(p_values, d_values, q_values, P_values, D_values, Q_values, m_values):
+    for _ in range(n_iter):
+        
+        # Randomly select each parameter from the provided lists
+        p = np.random.choice(p_values)
+        d = np.random.choice(d_values)
+        q = np.random.choice(q_values)
+        P = np.random.choice(P_values)
+        D = np.random.choice(D_values)
+        Q = np.random.choice(Q_values)
+        m = np.random.choice(m_values)
+        print(f"{p}-{d}-{q}-{P}-{D}-{Q}-{m}")
+        
         try:
             model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
             model_fit = model.fit(disp=False)
             predictions = model_fit.forecast(steps=len(test))
             mape = mean_absolute_percentage_error(test, predictions)
 
-
             if mape < best_score:
                 best_score, best_cfg = mape, (p, d, q, P, D, Q, m)
         except:
             continue
+    
     return best_cfg, best_score
 
 def evaluate_sarima(data, best_cfg):
     train_size = int(len(data) * 0.8)
     train, test = data[:train_size], data[train_size:]
-
-
+    
+    # Unpack best configuration
     p, d, q, P, D, Q, m = best_cfg
     model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
     model_fit = model.fit(disp=False)
     predictions = model_fit.forecast(steps=len(test))
 
-   # Compute metrics
+    # Compute metrics
     mae = mean_absolute_error(test, predictions)
     mape = mean_absolute_percentage_error(test, predictions)
     mse = mean_squared_error(test, predictions)
     rmse = np.sqrt(mse)
     
-    print(f"MAE: {mae}")
-    print(f"MAPE: {mape}%")
-    print(f"MSE: {mse}")
-    print(f"RMSE: {rmse}")
+    results =  {
+        "mae" : mae, 
+        "mape" : mape, 
+        "mse" : mse, 
+        "rmse": rmse, 
+    }
     
-    return mae, mape, mse, rmse
+    return results
