@@ -1,62 +1,16 @@
-# from statsmodels.tsa.statespace.sarimax import SARIMAX
-# from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
-# import itertools
-# import numpy as np
 
-# def grid_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q_values, m_values):
-#     best_score, best_cfg = float("inf"), None
-#     train_size = int(len(data) * 0.8)
-#     train, test = data[:train_size], data[train_size:]
-    
-#     for p, d, q, P, D, Q, m in itertools.product(p_values, d_values, q_values, P_values, D_values, Q_values, m_values):
-#         try:
-#             model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
-#             model_fit = model.fit(disp=False)
-#             predictions = model_fit.forecast(steps=len(test))
-#             mape = mean_absolute_percentage_error(test, predictions)
-
-
-#             if mape < best_score:
-#                 best_score, best_cfg = mape, (p, d, q, P, D, Q, m)
-#         except:
-#             continue
-#     return best_cfg, best_score
-
-# def evaluate_sarima(data, best_cfg):
-#     train_size = int(len(data) * 0.8)
-#     train, test = data[:train_size], data[train_size:]
-
-
-#     p, d, q, P, D, Q, m = best_cfg
-#     model = SARIMAX(train, order=(p, d, q), seasonal_order=(P, D, Q, m))
-#     model_fit = model.fit(disp=False)
-#     predictions = model_fit.forecast(steps=len(test))
-
-#    # Compute metrics
-#     mae = mean_absolute_error(test, predictions)
-#     mape = mean_absolute_percentage_error(test, predictions)
-#     mse = mean_squared_error(test, predictions)
-#     rmse = np.sqrt(mse)
-    
-#     results =  {
-#         "mae" : mae, 
-#         "mape" : mape, 
-#         "mse" : mse, 
-#         "rmse": rmse, 
-#     }
-    
-#     return results
 
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
 import numpy as np
 
 def random_search_sarima(data, p_values, d_values, q_values, P_values, D_values, Q_values, m_values, n_iter=10):
+    data = data.copy(deep = True)
     best_score, best_cfg = float("inf"), None
     train_size = int(len(data) * 0.8)
     train, test = data[:train_size], data[train_size:]
     
-    for _ in range(n_iter):
+    for _ in range(2):
         
         # Randomly select each parameter from the provided lists
         p = np.random.choice(p_values)

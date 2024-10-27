@@ -1,8 +1,8 @@
+
 import pandas as pd
 import numpy as np
 from statsmodels.tsa.api import VAR
 from sklearn.metrics import mean_absolute_error, mean_squared_error, mean_absolute_percentage_error
-
 
 def apply_differencing(df, d):
     if d == 0:
@@ -10,16 +10,19 @@ def apply_differencing(df, d):
     else:
         return df.diff(d).dropna()
 
-
-def grid_search_var(df, d_values=[0, 1, 2], p=15):
+def random_search_var(df, d_values=[0, 1, 2], p_values=[1, 2, 3, 4, 5, 10, 15], n_iter=10):
     df_original = df.copy(deep=True)  # Ensure original df isn't modified
     metrics = {}
-
     train_size = int(len(df) * 0.8)
-    counter = True
+    best_mape = float('inf')
 
-    for d in d_values:
-        # Apply differencing on the df so that we don't have to offset the forecast to compute the metrics.
+    for _ in range(n_iter):
+        # Randomly select values for d and p
+        d = np.random.choice(d_values)
+        p = np.random.choice(p_values)
+        print(f"{p}-{d}")
+        
+        # Apply differencing to the data
         df_diff = apply_differencing(df_original, d)
         df_train_diff, df_test_diff = df_diff[:train_size], df_diff[train_size:]
 
@@ -38,34 +41,21 @@ def grid_search_var(df, d_values=[0, 1, 2], p=15):
             mae = mean_absolute_error(df_test_diff.iloc[:, -1], forecast_df.iloc[:, -1])
             mape = mean_absolute_percentage_error(df_test_diff.iloc[:, -1], forecast_df.iloc[:, -1])
 
-            # Store the best result (minimum MAPE)
-            if counter:
+            # Update the best metrics if current MAPE is lower
+            if mape < best_mape:
+                best_mape = mape
                 metrics = {
+                    "d": d,
+                    "p": p,
                     "mse": mse,
                     "rmse": rmse,
                     "mae": mae,
                     "mape": mape,
                 }
-                counter = False  # Set counter to False after the first iteration
-            else:
-                if mape < metrics['mape']:
-                    metrics = {
-                        "mse": mse,
-                        "rmse": rmse,
-                        "mae": mae,
-                        "mape": mape,
-                    }
         except Exception as e:
             print(f"Model failed for d={d}, p={p}: {e}")
 
     # Return the best metrics after the search is complete
     return metrics
 
-
-# Load a dataset for testing (replace 'your_dataset.csv' with the actual dataset file)
-df = pd.read_csv('datasets/apple2.csv', index_col=0, parse_dates=True)
-
-# Call the grid search function and get the best parameters
-metrics = grid_search_var(df)
-print(metrics)
 
