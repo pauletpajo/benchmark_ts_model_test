@@ -10,7 +10,7 @@ def random_search_sarima(data, p_values, d_values, q_values, P_values, D_values,
     train_size = int(len(data) * 0.8)
     train, test = data[:train_size], data[train_size:]
     
-    for _ in range(2):
+    for _ in range(n_iter):
         
         # Randomly select each parameter from the provided lists
         p = np.random.choice(p_values)
